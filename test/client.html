@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <form id="articleForm">
+        <input type="text" name="title" placeholder="Title" />
+        <input type="text" name="summary" placeholder="Summary" />
+        <input type="text" name="author" placeholder="Author" />
+        <input type="number" name="readTime" placeholder="Read time" />
+        <input type="text" name="tags" placeholder="Tags (comma separated)" />
+        <input type="text" name="equations" placeholder="Equations (comma separated)" />
+        <input type="file" id="fileInput" multiple />
+        <button type="submit">Submit</button>
+      </form>
+
+      <script>
+        document.getElementById('articleForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const form = new FormData();
+  const fileInput = document.getElementById('fileInput');
+
+  form.append('title', 'My Article');
+  form.append('summary', 'Short desc');
+  form.append('author', 'admin');
+  form.append('readTime', '3');
+
+  // Assuming comma-separated input fields
+  const tags = document.querySelector('input[name="tags"]').value.split(',');
+  tags.forEach(tag => form.append('tags', tag.trim()));
+
+  const equations = document.querySelector('input[name="equations"]').value.split(',');
+  equations.forEach(eq => form.append('equations', eq.trim()));
+
+  // Files
+  for (const file of fileInput.files) {
+    form.append('attachments', file);
+  }
+
+  const token = 'your-jwt-token'; // Replace this
+
+  try {
+    const res = await fetch('http://localhost:7000/api/admin/article/', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`, // Required if route is protected
+      },
+      body: form,
+    });
+
+    const result = await res.json();
+    console.log(result);
+  } catch (err) {
+    console.error('Upload error:', err);
+  }
+});
+
+      </script>
+</body>
+</html>
