@@ -7,14 +7,19 @@ const includeRelations = {
   attachments: true,
 };
 
-exports.createArticle = async (data) => {
+exports.createArticle = async ({
+  title,
+  content,
+  summary,
+  author,
+  readTime,
+  tags = '[]',
+  equations = '[]',
+  attachments = [],
+}) => {
   try {
-    const { title, content, summary, author, readTime, tags = [], equations = [], attachments = [] } = data;
-
-    const tagData = tags.map((tag) => ({
-      where: { name: tag },
-      create: { name: tag },
-    }));
+    const parsedTags = parseJsonArray(tags);
+    const parsedEquations = parseJsonArray(equations);
 
     return await db.article.create({
       data: {
@@ -23,9 +28,9 @@ exports.createArticle = async (data) => {
         summary,
         author,
         readTime,
-        tags: { connectOrCreate: tagData },
-        equations: { create: equations.map((latex) => ({ latex })) },
-        attachments: { create: attachments.map(({ fileName, fileUrl }) => ({ fileName, fileUrl })) },
+        tags: { connectOrCreate: buildTagData(parsedTags) },
+        equations: { create: buildEquationData(parsedEquations) },
+        attachments: { create: buildAttachmentData(attachments) },
       },
       include: includeRelations,
     });
@@ -34,6 +39,7 @@ exports.createArticle = async (data) => {
     throw new Error('Failed to create article');
   }
 };
+
 
 exports.getArticles = async (articleNum, page) => {
   if (!Number.isInteger(articleNum) || !Number.isInteger(page)) {
@@ -64,15 +70,23 @@ exports.getArticleById = async (id) => {
   }
 };
 
-exports.updateArticle = async (id, data) => {
-  const { title, content, summary, author, readTime, tags = [], equations = [], attachments = [] } = data;
-
-  const tagData = tags.map((tag) => ({
-    where: { name: tag },
-    create: { name: tag },
-  }));
-
+exports.updateArticle = async (
+  id,
+  {
+    title,
+    content,
+    summary,
+    author,
+    readTime,
+    tags = '[]',
+    equations = '[]',
+    attachments = [],
+  }
+) => {
   try {
+    const parsedTags = parseJsonArray(tags);
+    const parsedEquations = parseJsonArray(equations);
+
     return await db.$transaction(async (tx) => {
       await tx.equation.deleteMany({ where: { articleId: id } });
       await tx.attachment.deleteMany({ where: { articleId: id } });
@@ -87,13 +101,13 @@ exports.updateArticle = async (id, data) => {
           readTime,
           tags: {
             set: [],
-            connectOrCreate: tagData,
+            connectOrCreate: buildTagData(parsedTags),
           },
           equations: {
-            create: equations.map((latex) => ({ latex })),
+            create: buildEquationData(parsedEquations),
           },
           attachments: {
-            create: attachments.map(({ fileName, fileUrl }) => ({ fileName, fileUrl })),
+            create: buildAttachmentData(attachments),
           },
         },
         include: includeRelations,
